@@ -1,32 +1,24 @@
 import { z } from "zod";
 import { loadPacket, appendQuestion, loadQuestions, answerQuestion } from "../storage.js";
 
-const PostAction = z.object({
+export const checkQuestionsParams = z.object({
   cwd: z.string().describe("The working directory of the project"),
-  action: z.literal("post"),
-  question: z.string().describe("The question to post"),
+  action: z.enum(["post", "read", "answer"]).describe("post = ask a question, read = see all questions, answer = respond to a question"),
+  question: z.string().optional().describe("The question to post (required when action is 'post')"),
+  session_id: z.string().optional().describe("Filter to a specific session (optional, defaults to latest packet)"),
+  question_id: z.string().optional().describe("UUID of the question to answer (required when action is 'answer')"),
+  answer: z.string().optional().describe("The answer to the question (required when action is 'answer')"),
 });
-
-const ReadAction = z.object({
-  cwd: z.string().describe("The working directory of the project"),
-  action: z.literal("read"),
-  session_id: z.string().optional().describe("Filter to a specific session (defaults to latest packet)"),
-});
-
-const AnswerAction = z.object({
-  cwd: z.string().describe("The working directory of the project"),
-  action: z.literal("answer"),
-  question_id: z.string().describe("UUID of the question to answer"),
-  answer: z.string().describe("The answer to the question"),
-});
-
-export const checkQuestionsParams = z.discriminatedUnion("action", [
-  PostAction,
-  ReadAction,
-  AnswerAction,
-]);
 
 export async function executeCheckQuestions(args: z.infer<typeof checkQuestionsParams>): Promise<string> {
+  // Validate required fields per action
+  if (args.action === "post" && !args.question) {
+    return "Error: 'question' is required when action is 'post'.";
+  }
+  if (args.action === "answer" && (!args.question_id || !args.answer)) {
+    return "Error: 'question_id' and 'answer' are required when action is 'answer'.";
+  }
+
   // All actions require an active handoff packet
   const packetResult = loadPacket(args.cwd);
   if (packetResult.status === "missing") {
@@ -40,7 +32,7 @@ export async function executeCheckQuestions(args: z.infer<typeof checkQuestionsP
 
   switch (args.action) {
     case "post": {
-      const questionId = appendQuestion(args.cwd, sessionId, args.question);
+      const questionId = appendQuestion(args.cwd, sessionId, args.question!);
       return `Question posted (ID: ${questionId}). The other session can see it by calling check_questions with action "read".`;
     }
 
@@ -67,7 +59,7 @@ export async function executeCheckQuestions(args: z.infer<typeof checkQuestionsP
 
     case "answer": {
       try {
-        answerQuestion(args.cwd, args.question_id, args.answer);
+        answerQuestion(args.cwd, args.question_id!, args.answer!);
         return `Answer posted for question ${args.question_id}.`;
       } catch (err) {
         return err instanceof Error ? err.message : String(err);
