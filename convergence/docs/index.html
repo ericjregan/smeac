@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convergence Loop — Claude Code + Codex CLI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #fafaf8;
+  --surface: #ffffff;
+  --raised: #f4f4f1;
+  --border: #e2e2dc;
+  --border-bright: #d0d0c8;
+  --text: #2a2a28;
+  --text-bright: #111110;
+  --text-muted: #7a7a72;
+  --accent: #1a56db;
+  --accent-light: #eef3ff;
+  --accent-dim: #1a56db12;
+  --green: #16743a;
+  --green-bg: #edf7f0;
+  --green-border: #b8dfc4;
+  --amber: #9a6700;
+  --amber-bg: #fef7e0;
+  --amber-border: #e6d190;
+  --red: #c53030;
+  --red-bg: #fef0f0;
+  --red-border: #e8b4b4;
+  --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', Menlo, monospace;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--text);
+  background: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+}
+
+/* ── Header ── */
+.header {
+  padding: 2.5rem 0 2rem;
+  border-bottom: 2px solid var(--text-bright);
+  margin-bottom: 3rem;
+}
+.header .eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.6rem;
+}
+.header h1 {
+  font-family: var(--serif);
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
+}
+.header .tagline {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--text-muted);
+  max-width: 40rem;
+  line-height: 1.6;
+}
+
+/* ── Sections ── */
+.section { margin-bottom: 3rem; }
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.3rem;
+}
+h2 {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+h3 {
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin: 1.75rem 0 0.5rem;
+}
+p { margin-bottom: 0.9rem; }
+
+/* ── Inline code ── */
+code {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  padding: 0.12em 0.4em;
+  border-radius: 3px;
+  color: var(--text-bright);
+}
+pre {
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.1rem 1.3rem;
+  overflow-x: auto;
+  margin: 0.85rem 0 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+pre code { background: none; border: none; padding: 0; color: inherit; }
+
+/* ── Key concept boxes ── */
+.concept-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 1.1rem 1.3rem;
+  margin: 1.25rem 0;
+}
+.concept-box .concept-title {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.35rem;
+}
+.concept-box p { margin-bottom: 0.5rem; font-size: 0.92rem; }
+.concept-box p:last-child { margin-bottom: 0; }
+
+/* ── Two-tool comparison ── */
+.tool-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin: 1.25rem 0 1.5rem;
+}
+@media (max-width: 640px) { .tool-compare { grid-template-columns: 1fr; } }
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+}
+.tool-card .tool-logo {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-bright);
+  margin-bottom: 0.15rem;
+}
+.tool-card .tool-by {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+.tool-card .tool-desc {
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.tool-card .tool-install {
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* ── Pipeline flow ── */
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 1.75rem 0;
+  padding: 1.25rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.pipe-node {
+  flex-shrink: 0;
+  padding: 0.5rem 0.85rem;
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.pipe-node.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.pipe-connector {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 1px;
+  background: var(--border-bright);
+  position: relative;
+}
+.pipe-connector::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: -2.5px;
+  border-left: 5px solid var(--border-bright);
+  border-top: 2.5px solid transparent;
+  border-bottom: 2.5px solid transparent;
+}
+.pipe-node.active + .pipe-connector { background: var(--accent); }
+.pipe-node.active + .pipe-connector::after { border-left-color: var(--accent); }
+
+/* ── Architecture diagram ── */
+.arch-diagram {
+  margin: 1.5rem 0 2rem;
+  padding: 1.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.arch-box {
+  width: 22rem;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.1rem 1.3rem;
+  background: var(--surface);
+}
+.arch-box .box-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-bright);
+  margin-bottom: 0.4rem;
+}
+.arch-box .box-detail {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.arch-box.highlight {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.arch-box.highlight .box-title { color: var(--accent); }
+.arch-connector {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--border-bright);
+  position: relative;
+}
+.arch-connector .conn-label {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.arch-mcp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  background: var(--accent-dim);
+  border: 1px solid #1a56db28;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: var(--accent);
+  margin-top: 0.35rem;
+}
+.arch-mcp-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.arch-return {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.arch-return-tag {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  font-weight: 600;
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+}
+.arch-return-tag.converged { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.arch-return-tag.pause { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.arch-return-tag.failed { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+/* ── Command cards ── */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+  margin: 1rem 0 1.5rem;
+}
+@media (max-width: 720px) { .cmd-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .cmd-grid { grid-template-columns: 1fr; } }
+.cmd-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+}
+.cmd-card .cmd-name {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-bright);
+  margin-bottom: 0.25rem;
+}
+.cmd-card .cmd-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.cmd-card.primary { border-color: var(--accent); border-left-width: 3px; }
+.cmd-card.primary .cmd-name { color: var(--accent); }
+
+/* ── Loop timeline ── */
+.timeline { margin: 1.25rem 0; }
+.tl-step {
+  display: flex;
+  gap: 1.1rem;
+  position: relative;
+  padding-bottom: 1.1rem;
+}
+.tl-step:last-child { padding-bottom: 0; }
+.tl-step::before {
+  content: '';
+  position: absolute;
+  left: 0.95rem;
+  top: 2.1rem;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.tl-step:last-child::before { display: none; }
+.tl-marker {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
+}
+.tl-content { flex: 1; padding-top: 0.15rem; }
+.tl-content strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 0.2rem;
+}
+.tl-content p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 0.3rem;
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 0.12em 0.5em;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.badge.agree { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.badge.pause { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.badge.nit   { background: var(--raised); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ── Tables ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.85rem 0 1.25rem;
+  font-size: 0.88rem;
+}
+th, td {
+  padding: 0.55rem 0.8rem;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+th {
+  background: var(--raised);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Callout ── */
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-light);
+  padding: 0.85rem 1.1rem;
+  margin: 1.1rem 0;
+  border-radius: 0 5px 5px 0;
+  font-size: 0.9rem;
+}
+.callout.warn {
+  border-color: var(--amber);
+  background: var(--amber-bg);
+}
+.callout em { color: var(--text-bright); font-style: normal; font-weight: 600; }
+
+/* ── Lists ── */
+ul, ol {
+  margin: 0.5rem 0 1rem 1.5rem;
+  font-size: 0.92rem;
+}
+li { margin-bottom: 0.4rem; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Scenario walkthrough ── */
+.scenario {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 1.25rem 0;
+  overflow: hidden;
+}
+.scenario-header {
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.scenario-body {
+  padding: 1rem 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.scenario-body .step-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 0.75rem;
+  margin-bottom: 0.15rem;
+}
+.scenario-body .step-label:first-child { margin-top: 0; }
+
+/* ── Principles ── */
+.principles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+@media (max-width: 640px) { .principles { grid-template-columns: 1fr; } }
+.principle {
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.principle .num {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+.principle strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-bright);
+  margin-bottom: 0.2rem;
+}
+.principle p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+.principle.wide { grid-column: span 2; }
+@media (max-width: 640px) { .principle.wide { grid-column: span 1; } }
+
+/* ── Separator ── */
+.sep {
+  height: 1px;
+  background: var(--border);
+  margin: 3rem 0;
+}
+
+/* ── Footer ── */
+.footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ── Print ── */
+@media print {
+  body { font-size: 10.5pt; }
+  .page { padding: 0; max-width: none; }
+  .header { padding: 0.5rem 0; }
+  .header h1 { font-size: 1.5rem; }
+  .section { break-inside: avoid; }
+  .pipeline, .arch-diagram { border: 1px solid #999; }
+  .cmd-card, .tool-card, .principle { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ━━━ HEADER ━━━ -->
+<header class="header">
+  <div class="eyebrow">Open Source Tooling</div>
+  <h1>Convergence Loop</h1>
+  <p class="tagline">An automated audit pipeline that makes Claude Code and OpenAI's Codex CLI work together &mdash; so two AI systems check each other's work before you ship anything.</p>
+</header>
+
+<!-- ━━━ THE PROBLEM ━━━ -->
+<section class="section">
+  <div class="section-label">Background</div>
+  <h2>The Problem This Solves</h2>
+
+  <p>If you use AI to write code, you've probably noticed something: the AI that wrote the code is terrible at reviewing it. It's too agreeable with itself. It misses its own blind spots. It rounds up to green.</p>
+
+  <p>The fix that experienced developers have landed on is <strong>adversarial review</strong> &mdash; using a second, independent AI to audit the first one's work. Claude builds. Codex reviews. Or vice versa. The two systems have different training, different biases, different blind spots. When they disagree, that's where the interesting bugs live.</p>
+
+  <p>The problem is the workflow. Today, if you want Claude and Codex to review each other, you're doing this manually:</p>
+
+  <ol>
+    <li>Run Claude Code to plan or build something</li>
+    <li>Copy-paste a prompt into Codex asking it to review</li>
+    <li>Read Codex's findings</li>
+    <li>Go back to Claude, paste the findings, ask Claude to fix</li>
+    <li>Copy-paste another prompt into Codex to verify the fixes</li>
+    <li>Repeat until both agree</li>
+  </ol>
+
+  <p>On a big feature, this loop runs 3-5 times. That's a lot of copy-paste, a lot of context switching, and a lot of your time spent being a human clipboard between two AI systems.</p>
+
+  <p><strong>Convergence Loop automates this entire workflow.</strong> You run one command. Claude does the work, spawns a subagent that calls Codex via MCP, classifies the findings, fixes what it agrees with, and only stops to ask you when there's a genuine disagreement. The loop runs until both systems converge &mdash; or until you tell it to stop.</p>
+</section>
+
+<!-- ━━━ WHAT IS CLAUDE CODE / CODEX ━━━ -->
+<section class="section">
+  <div class="section-label">Prerequisites</div>
+  <h2>The Two Tools You Need</h2>
+
+  <div class="tool-compare">
+    <div class="tool-card">
+      <div class="tool-logo">Claude Code</div>
+      <div class="tool-by">by Anthropic</div>
+      <div class="tool-desc">A CLI tool that puts Claude (Anthropic's AI) directly in your terminal. It can read your files, write code, run commands, and work through complex multi-step tasks. Think of it as an AI pair programmer that lives in your terminal instead of a chat window.</div>
+      <div class="tool-install">npm install -g @anthropic-ai/claude-code</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-logo">Codex CLI</div>
+      <div class="tool-by">by OpenAI</div>
+      <div class="tool-desc">OpenAI's equivalent &mdash; a CLI tool that puts GPT in your terminal. It can also read files, run commands, and analyze codebases. Crucially, it has a built-in MCP server mode, which means other tools can call it programmatically without copy-paste.</div>
+      <div class="tool-install">npm install -g @openai/codex</div>
+    </div>
+  </div>
+
+  <div class="concept-box">
+    <div class="concept-title">What is MCP?</div>
+    <p>Model Context Protocol (MCP) is a standard that lets AI tools talk to each other. Instead of you copy-pasting between Claude and Codex, Claude can call Codex directly as an MCP "tool" &mdash; like calling a function. Codex has a built-in MCP server (<code>codex mcp-server</code>) that exposes this capability. Convergence Loop registers this server so Claude Code can invoke Codex natively.</p>
+  </div>
+</section>
+
+<!-- ━━━ HOW IT WORKS (HIGH LEVEL) ━━━ -->
+<section class="section">
+  <div class="section-label">Overview</div>
+  <h2>How It Works</h2>
+
+  <p>When you run <code>/planaz</code> (to plan a feature) or <code>/build</code> (to build one), the convergence loop fires automatically at the end. Here's the flow:</p>
+
+  <div class="pipeline">
+    <div class="pipe-node">you type /planaz</div>
+    <div class="pipe-connector"></div>
+    <div class="pipe-node">Claude plans</div>
+    <div class="pipe-connector"></div>
+    <div class="pipe-node active">subagent spawns</div>
+    <div class="pipe-connector"></div>
+    <div class="pipe-node active">Codex audits</div>
+    <div class="pipe-connector"></div>
+    <div class="pipe-node">converge or PAUSE</div>
+  </div>
+
+  <p>The key innovation is the <strong>subagent</strong>. Instead of running the Codex audit in the same session (which fails on big builds because Claude runs out of context), Convergence Loop spawns a fresh subagent with its own 200k-token context window. The subagent reads a compact handoff file, runs the Codex loop, and reports back. The loop always fires, no matter how big the build was.</p>
+
+  <div class="concept-box">
+    <div class="concept-title">What is a subagent?</div>
+    <p>Claude Code can spawn child processes called "subagents" via the Agent tool. Each subagent gets its own independent context window (200k tokens), inherits all of the parent's tools (including MCP connections), and can run commands just like the parent. When it finishes, it returns a result to the parent session. Think of it like forking a process &mdash; the child has a fresh memory but the same capabilities.</p>
+  </div>
+</section>
+
+<!-- ━━━ A REAL EXAMPLE ━━━ -->
+<section class="section">
+  <div class="section-label">Walkthrough</div>
+  <h2>What You Actually See</h2>
+
+  <p>Here's what happens when you run <code>/planaz</code> on a real feature. This example is from the system auditing its own build plan:</p>
+
+  <div class="scenario">
+    <div class="scenario-header">Example: /planaz on a feature</div>
+    <div class="scenario-body">
+      <div class="step-label">Step 1-5: Claude works</div>
+      <p>Claude reads your codebase, creates a detailed plan, audits its own plan for issues, incorporates fixes, and saves the plan to disk. You watch this happen &mdash; it takes 2-5 minutes depending on complexity.</p>
+
+      <div class="step-label">Step 6: Convergence loop fires</div>
+      <p>Claude writes a handoff file with all the context Codex needs, then spawns a subagent. The subagent calls Codex via MCP. Codex reads the plan and all referenced files, then returns findings like:</p>
+      <pre><code>[BLOCKER] Task #1: Plan tier rename is incomplete &mdash; "starter"
+exists in billing, constants, org defaults, not just PLAN_LIMITS.
+[WARNING] Task #6: Onboarding CTA in REQUIRED_FIELDS would break
+Solo users &mdash; get_missing_fields() is global.
+[WARNING] Task #4: UTM service is redirect-based, not raw params.</code></pre>
+
+      <div class="step-label">Claude classifies each finding</div>
+      <p>Claude reads each finding and decides: is this real (AGREE), do I need the user's input (PAUSE), or is this cosmetic (NIT)?</p>
+      <pre><code>BLOCKER 1: Plan tier rename &mdash; AGREE. Adding normalize_plan_name().
+WARNING 1: Onboarding fields &mdash; AGREE. Making CTA conditional.
+WARNING 2: UTM redirect &mdash; AGREE. New append_cta_utm_params().</code></pre>
+
+      <div class="step-label">Claude fixes all AGREE items</div>
+      <p>The plan file gets updated with all the fixes. Then the loop runs again &mdash; Codex re-audits the updated plan.</p>
+
+      <div class="step-label">Iteration 2: Codex re-audits</div>
+      <p>Codex reviews the fixes. If it finds new issues, the loop continues. If it's clean, the loop converges. In this case: zero new findings. Converged in 2 iterations.</p>
+
+      <div class="step-label">You see the report</div>
+      <pre><code>Converged: YES | Iterations: 2 | Fixed: 9 | Paused: 0 | NITs: 1</code></pre>
+    </div>
+  </div>
+
+  <p>If Codex had found something Claude disagreed with, the loop would have <strong>paused</strong> and asked you to decide. You're never out of the loop &mdash; you just don't have to be in the loop for every finding.</p>
+</section>
+
+<!-- ━━━ ARCHITECTURE ━━━ -->
+<section class="section">
+  <div class="section-label">System Design</div>
+  <h2>Architecture</h2>
+
+  <div class="arch-diagram">
+    <div class="arch-box">
+      <div class="box-title">Your Terminal &mdash; Main Session</div>
+      <div class="box-detail">Claude Code runs /planaz or /build<br>Does all the primary work (planning, building, self-audit)</div>
+    </div>
+
+    <div class="arch-connector">
+      <span class="conn-label">writes handoff file to ~/.claude/tmp/</span>
+    </div>
+
+    <div class="arch-box highlight">
+      <div class="box-title">Convergence Subagent</div>
+      <div class="box-detail">Fresh 200k context window<br>Runs /converge &mdash; reads handoff, calls Codex, classifies findings</div>
+      <div class="arch-mcp-badge">codex mcp-server (stdio)</div>
+      <div style="margin-top:0.5rem;">
+        <div class="box-detail"><span class="badge agree">AGREE</span> auto-fix &nbsp; <span class="badge pause">PAUSE</span> ask human &nbsp; <span class="badge nit">NIT</span> log only</div>
+      </div>
+      <div class="arch-return">
+        <span class="arch-return-tag converged">CONVERGED</span>
+        <span class="arch-return-tag pause">PAUSE</span>
+        <span class="arch-return-tag failed">CODEX_FAILED</span>
+      </div>
+    </div>
+
+    <div class="arch-connector">
+      <span class="conn-label">returns result to main session</span>
+    </div>
+
+    <div class="arch-box">
+      <div class="box-title">Main Session &mdash; Handles Result</div>
+      <div class="box-detail">Presents convergence report to you<br>Handles PAUSE decisions (re-spawns subagent with your choice)<br>Cleans up ephemeral files</div>
+    </div>
+  </div>
+
+  <h3>Why not run the loop in the same session?</h3>
+  <p>On big builds, Claude's main session consumes most of its 200k-token context on the actual work (building 15+ files, running tests, fixing audit findings). By the time the convergence loop tries to fire, there's no context left. This was observed in production: a 16-task build with 383 tests completed successfully, but the convergence loop never ran because the context was exhausted.</p>
+  <p>The subagent gets its own fresh 200k context window. The loop always fires, regardless of how much work the main session did.</p>
+</section>
+
+<!-- ━━━ COMMANDS OVERVIEW ━━━ -->
+<section class="section">
+  <div class="section-label">Interface</div>
+  <h2>The Six Commands</h2>
+
+  <p>Convergence Loop installs six slash commands into Claude Code. These are custom instructions &mdash; markdown files stored in <code>~/.claude/commands/</code>. When you type <code>/planaz</code> in the terminal, Claude Code loads <code>planaz.md</code> and follows its instructions. Think of them like scripts, but written in natural language instead of code.</p>
+
+  <p>The first three are the core pipeline. The last three are supporting tools that can also be used independently.</p>
+
+  <div class="cmd-grid">
+    <div class="cmd-card primary">
+      <div class="cmd-name">/planaz</div>
+      <div class="cmd-desc">Plan A-to-Z. The full planning pipeline before you write any code.</div>
+    </div>
+    <div class="cmd-card primary">
+      <div class="cmd-name">/build</div>
+      <div class="cmd-desc">Execute a plan. The full build pipeline with continuous quality checks.</div>
+    </div>
+    <div class="cmd-card primary">
+      <div class="cmd-name">/converge</div>
+      <div class="cmd-desc">The adversarial audit loop. Called automatically by /planaz and /build.</div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-name">/conductor</div>
+      <div class="cmd-desc">The micro-tasking framework that /build uses internally.</div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-name">/audit</div>
+      <div class="cmd-desc">Standalone reliability audit. Find failures, add tests, fix until stable.</div>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-name">/codex</div>
+      <div class="cmd-desc">Manual Codex prompt generator for when you want to run Codex separately.</div>
+    </div>
+  </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ━━━ /PLANAZ DEEP DIVE ━━━ -->
+<section class="section">
+  <div class="section-label">Command Deep Dive</div>
+  <h2>/planaz &mdash; Plan A-to-Z</h2>
+
+  <p><code>/planaz</code> is what you run <strong>before writing any code</strong>. You give it an objective ("build user authentication with OAuth2") and it produces a complete, audited, Codex-reviewed implementation plan. The name means "Plan A to Z" &mdash; it handles everything from understanding your codebase to having a second AI verify the plan is sound.</p>
+
+  <h3>Why not just ask Claude to "make a plan"?</h3>
+  <p>You can, and Claude will produce something. But without structure, plans tend to be vague, miss edge cases, have wrong sequencing, and skip things like migrations, tests, and environment variables. <code>/planaz</code> enforces a rigorous process:</p>
+
+  <ol>
+    <li>It reads your actual codebase first (not guessing from memory)</li>
+    <li>It decomposes work into the smallest possible atomic tasks</li>
+    <li>It audits its own plan for issues before showing it to you</li>
+    <li>Then a completely separate AI (Codex) audits the plan independently</li>
+    <li>Disagreements between the two AIs surface the real design questions</li>
+  </ol>
+
+  <h3>The seven steps</h3>
+
+  <table>
+    <tr><th>Step</th><th>What happens</th><th>Why it matters</th></tr>
+    <tr>
+      <td><strong>1. Gather Context</strong></td>
+      <td>Reads your CLAUDE.md, roadmap, git history, and all files relevant to the objective. Identifies boundaries and conventions.</td>
+      <td>Claude plans from your actual codebase, not from its training data. It knows your project's real patterns.</td>
+    </tr>
+    <tr>
+      <td><strong>2. Plan</strong></td>
+      <td>Creates a structured Conductor plan: objective, scope, numbered micro-tasks, success criteria, dependencies, affected files, risk areas.</td>
+      <td>Every task must be atomic (if it has "and" in it, it's two tasks), independently verifiable, and specific enough for someone unfamiliar with the codebase to execute.</td>
+    </tr>
+    <tr>
+      <td><strong>3. Self-Audit</strong></td>
+      <td>Claude audits its own plan as if it were a code review. Checks: is each task truly atomic? Dependencies correct? Missing migrations, tests, env vars? Scope creep?</td>
+      <td>Catches the obvious mistakes before sending to Codex. Produces findings with severity levels (BLOCKER / WARNING / NIT).</td>
+    </tr>
+    <tr>
+      <td><strong>4. Re-Plan</strong></td>
+      <td>Incorporates all self-audit findings into a revised plan. This becomes the working plan.</td>
+      <td>The plan you save has already been through one round of audit. It's tighter and more complete than the first draft.</td>
+    </tr>
+    <tr>
+      <td><strong>5. Save</strong></td>
+      <td>Saves the plan to your project root as <code>PLAN-&lt;topic&gt;.md</code>. Includes the full plan, the audit findings that shaped it, and the context gathered in step 1.</td>
+      <td>The plan is on disk. You can read it, share it, and reference it later with <code>/build</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>6. Convergence Loop</strong></td>
+      <td>Spawns a subagent that sends the plan to Codex for adversarial review. Codex reads the plan and all referenced files, reports findings. Claude classifies each finding, fixes what it agrees with, pauses for you on disagreements. Iterates until Codex has nothing left to flag.</td>
+      <td>A second AI with different training and biases reviews the plan independently. The things Claude missed, Codex often catches &mdash; and vice versa.</td>
+    </tr>
+    <tr>
+      <td><strong>7. Report</strong></td>
+      <td>Presents the convergence report: how many iterations, what was found, what was fixed, what was paused for your input, remaining NITs, residual risk.</td>
+      <td>You see the full audit trail. Nothing is hidden. The plan is now ready to execute with <code>/build</code>.</td>
+    </tr>
+  </table>
+
+  <p><strong>Important:</strong> <code>/planaz</code> never writes code. It never commits anything. It's planning only. The output is a <code>PLAN-*.md</code> file that <code>/build</code> can execute.</p>
+</section>
+
+<!-- ━━━ /BUILD DEEP DIVE ━━━ -->
+<section class="section">
+  <div class="section-label">Command Deep Dive</div>
+  <h2>/build &mdash; Execute a Plan</h2>
+
+  <p><code>/build</code> is what you run <strong>after planning</strong>. You point it at a plan file (created by <code>/planaz</code> or manually) and it executes every task in order, with continuous quality checks at every step. It doesn't just write code &mdash; it builds, verifies, audits, fixes, and then has Codex review everything.</p>
+
+  <h3>Why not just ask Claude to "build this"?</h3>
+  <p>Without structure, Claude tends to batch work, skip verification, drift from the plan, and declare success before confirming things actually work. <code>/build</code> enforces discipline:</p>
+
+  <ul>
+    <li>One micro-task at a time, full quality loop on each one</li>
+    <li>Reconciliation after every task ("did I build exactly what the plan said?")</li>
+    <li>A complete self-audit with real validation commands (tests, typechecks, builds)</li>
+    <li>Then Codex reviews the actual code changes independently</li>
+  </ul>
+
+  <h3>The six phases</h3>
+
+  <table>
+    <tr><th>Phase</th><th>What happens</th><th>Why it matters</th></tr>
+    <tr>
+      <td><strong>1. Build</strong></td>
+      <td>Executes the plan micro-task by micro-task using the Conductor protocol (see below). Each task goes through a full cycle: define the task, confirm scope, check UX constraints, implement, audit the change, confirm no drift.</td>
+      <td>Prevents Claude from batching work, skipping steps, or drifting from the plan. Every task is verified before moving on.</td>
+    </tr>
+    <tr>
+      <td><strong>2. Reconcile</strong></td>
+      <td>After all tasks are complete, goes through every single task in the plan and reports: DONE, MISSED, DEVIATED, or FLAGGED. Honest status &mdash; doesn't round up to green.</td>
+      <td>You see exactly what was built vs. what was planned. If something was missed or changed, it's visible.</td>
+    </tr>
+    <tr>
+      <td><strong>3. Self-Audit</strong></td>
+      <td>Runs a full reliability audit on the completed work. Typechecks, tests, build verification, API smoke tests, browser E2E if available. Reports hard metrics (pass/fail counts), not opinions.</td>
+      <td>Catches bugs before Codex even looks at the code. Finds missing tests, broken builds, type errors.</td>
+    </tr>
+    <tr>
+      <td><strong>4. Fix</strong></td>
+      <td>Takes every finding from the self-audit and fixes it using the Conductor protocol. Reruns validation after all fixes. Reports updated counts.</td>
+      <td>Claude fixes its own mess before asking Codex to review. Codex sees the cleaned-up version PLUS the git diff of what changed.</td>
+    </tr>
+    <tr>
+      <td><strong>5. Convergence Loop</strong></td>
+      <td>Spawns a subagent that sends the code to Codex for adversarial review. Codex gets the git diff, the self-audit findings, and the build reconciliation. It reads the actual files, can run tests, and reports findings. Claude classifies, fixes AGREE items, pauses for you on disputes.</td>
+      <td>Codex sees both the final code AND what changed (the diff). It can evaluate whether Claude's self-audit fixes actually resolved the issues, not just whether the final code looks OK.</td>
+    </tr>
+    <tr>
+      <td><strong>6. Report</strong></td>
+      <td>Final report: build reconciliation + convergence results + test counts + cumulative changes + residual risk.</td>
+      <td>Complete picture of what was built, how it was verified, and what could still break.</td>
+    </tr>
+  </table>
+
+  <p><strong>Important:</strong> <code>/build</code> never commits. It builds and verifies, but waits for you to say "commit" before touching git history.</p>
+</section>
+
+<!-- ━━━ /CONDUCTOR DEEP DIVE ━━━ -->
+<section class="section">
+  <div class="section-label">Command Deep Dive</div>
+  <h2>/conductor &mdash; The Micro-Tasking Framework</h2>
+
+  <p><code>/conductor</code> is the framework that <code>/build</code> uses internally to execute work. You can also invoke it directly for any multi-step task. It enforces a simple but powerful discipline: <strong>one tiny task at a time, with four agent roles checking each other.</strong></p>
+
+  <h3>The core rule</h3>
+  <p>Decompose every plan into the smallest possible sequential tasks. If a task has the word "and" in it, it's two tasks. Each task runs the full quality loop independently. No batching. No parallelism. If a task reveals hidden complexity mid-execution, stop and split it further.</p>
+
+  <h3>The four agent roles</h3>
+  <p>Claude plays all four roles in sequence for every single micro-task. This isn't four separate AI systems &mdash; it's one AI forced to think from four different perspectives:</p>
+
+  <table>
+    <tr><th>Role</th><th>Responsibility</th><th>Does NOT do</th></tr>
+    <tr>
+      <td><strong>UX Agent</strong></td>
+      <td>Ensures the change matches existing UI patterns, components, and conventions. Provides specs and constraints before any code is written.</td>
+      <td>Does not write code.</td>
+    </tr>
+    <tr>
+      <td><strong>Code Agent</strong></td>
+      <td>Implements exactly one micro-task, following the UX specs and the plan. Nothing more, nothing less.</td>
+      <td>Does not self-review.</td>
+    </tr>
+    <tr>
+      <td><strong>Audit Agent</strong></td>
+      <td>Line-by-line review of the change. Findings are specific: file, line, problem, expected vs actual behavior.</td>
+      <td>Does not fix issues.</td>
+    </tr>
+    <tr>
+      <td><strong>Anti-Drift Agent</strong></td>
+      <td>Enforces scope. Restates the current task at the start, confirms completion at the end. Has veto authority &mdash; can halt work if scope is violated.</td>
+      <td>Does not implement or review code.</td>
+    </tr>
+  </table>
+
+  <h3>The loop (every micro-task, no exceptions)</h3>
+  <ol>
+    <li><strong>Conductor</strong> defines the next micro-task from the plan</li>
+    <li><strong>Anti-Drift</strong> restates scope, confirms the prior task is closed</li>
+    <li><strong>UX</strong> provides specs and constraints for this task only</li>
+    <li><strong>Code</strong> implements this task only</li>
+    <li><strong>Audit</strong> reviews the change, produces findings</li>
+    <li><strong>Conductor</strong> routes findings back (fix) or marks complete</li>
+    <li><strong>Anti-Drift</strong> confirms no drift, ready for next task</li>
+  </ol>
+
+  <p>Issues found? Repeat from step 3 or 4. Clean? Next task. No skipping "for small changes."</p>
+</section>
+
+<!-- ━━━ SUPPORTING COMMANDS ━━━ -->
+<section class="section">
+  <div class="section-label">Supporting Tools</div>
+  <h2>/audit, /converge, and /codex</h2>
+
+  <h3>/audit &mdash; Reliability Push</h3>
+  <p><code>/audit</code> runs a standalone reliability audit on whatever you point it at. It proactively finds failures (doesn't wait to be told where to look), adds automated tests if they're missing, runs high-volume validation, and fixes root causes until stable. It reports hard metrics &mdash; pass/fail counts, exact commands run &mdash; not opinions. Used internally by <code>/build</code> in Phase 3, but you can also run it independently on any feature or flow.</p>
+
+  <h3>/converge &mdash; Standalone Convergence Loop</h3>
+  <p><code>/converge</code> is the convergence loop extracted as its own command. It reads a handoff file (containing what to audit, project context, and file list), calls Codex via MCP, classifies findings, applies fixes, and iterates until convergence. <code>/planaz</code> and <code>/build</code> call it automatically via a subagent, but you can also run it manually in a fresh session &mdash; useful if the subagent timed out or you want to re-audit something with maximum context available.</p>
+
+  <h3>/codex &mdash; Manual Prompt Generator</h3>
+  <p><code>/codex</code> generates a copy-paste prompt for Codex based on what you just did in the current session. This is the pre-automation workflow &mdash; before the convergence loop existed, you'd run <code>/codex</code>, copy the output, paste it into a Codex terminal, and bring findings back manually. It still works as a fallback if MCP isn't available, or if you prefer the manual approach.</p>
+</section>
+
+<!-- ━━━ THE LOOP ━━━ -->
+<section class="section">
+  <div class="section-label">Core Mechanism</div>
+  <h2>The Convergence Loop, Step by Step</h2>
+
+  <p>This is what <code>/converge</code> does internally. Whether called by <code>/planaz</code>, <code>/build</code>, or manually, the loop follows the same eight steps:</p>
+
+  <div class="timeline">
+    <div class="tl-step">
+      <div class="tl-marker">A</div>
+      <div class="tl-content">
+        <strong>Build the Codex prompt</strong>
+        <p>Reconstruct a self-contained audit prompt from the handoff file. Includes: what to audit, project context, key files, tech stack, decisions made. For builds: includes the git diff and any self-audit findings. Each iteration rebuilds from current state &mdash; no accumulation of prior outputs.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">B</div>
+      <div class="tl-content">
+        <strong>Invoke Codex via MCP</strong>
+        <p>Call the <code>codex</code> MCP tool with the prompt. Codex reads files, can run tests, and reports findings. Runs with full access and zero permission prompts. If the MCP call fails, the system automatically falls back to <code>codex exec</code> via CLI &mdash; same Codex, just invoked as a one-shot command instead of through the MCP bridge. Only if both paths fail does the loop stop.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">C</div>
+      <div class="tl-content">
+        <strong>Classify every finding</strong>
+        <p>Claude reads each of Codex's findings and classifies it:</p>
+        <p><span class="badge agree">AGREE</span> Confirmed real issue. Claude will fix it automatically.<br>
+        <span class="badge pause">PAUSE</span> Needs human input &mdash; Claude disagrees, is uncertain, or the fix requires a product decision.<br>
+        <span class="badge nit">NIT</span> Cosmetic or trivial. Logged but not fixed.</p>
+        <p>Every classification must include specific reasoning. "I don't think this is an issue" is not acceptable &mdash; Claude must explain why, referencing the actual code or plan.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">D</div>
+      <div class="tl-content">
+        <strong>Check for PAUSE</strong>
+        <p>If anything was classified as PAUSE, the loop stops and presents the disagreement to you. You see what Codex found, what Claude thinks, and why Claude is uncertain. You decide: fix it, skip it, or handle it differently. The loop absorbs your decision and continues. You can also change direction entirely &mdash; every PAUSE is a decision surface.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">E</div>
+      <div class="tl-content">
+        <strong>Check for oscillation</strong>
+        <p>Before applying fixes, check the iteration log. If the same finding (same file + same issue type) appeared in the previous iteration after a claimed fix, it means Claude's fix didn't actually work. Instead of trying again, escalate to PAUSE. Don't fix the same thing twice without human input.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">F</div>
+      <div class="tl-content">
+        <strong>Apply fixes</strong>
+        <p>For plan audits: revise tasks, add missing dependencies, correct sequencing directly in the plan file. For build audits: apply code fixes using the Conductor protocol (each fix is a micro-task with its own audit cycle), then rerun validation.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">G</div>
+      <div class="tl-content">
+        <strong>Log the iteration</strong>
+        <p>Append findings, classifications, fixes, and test results to the iteration log at <code>~/.claude/tmp/</code>. A compaction rule keeps the log manageable: full detail for the most recent iteration, one-line summaries for earlier ones.</p>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-marker">H</div>
+      <div class="tl-content">
+        <strong>Check convergence</strong>
+        <p>If there were zero AGREE findings this iteration, the loop has converged &mdash; Codex has nothing left to flag. You can accept the result or request another iteration to be safe. If the loop hasn't converged, it checks in at regular intervals (every 3 iterations for plans, every 5 for builds) to ask if you want to continue or stop. Then loops back to step A.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ CLASSIFICATION ━━━ -->
+<section class="section">
+  <div class="section-label">Finding Triage</div>
+  <h2>Classification Rules</h2>
+
+  <table>
+    <tr>
+      <th>Classification</th>
+      <th>When Claude uses it</th>
+      <th>What happens</th>
+    </tr>
+    <tr>
+      <td><span class="badge agree">AGREE</span></td>
+      <td>Codex found a real issue. The fix is clear and doesn't expand scope or require a product decision.</td>
+      <td>Claude fixes it automatically. The loop continues to the next iteration.</td>
+    </tr>
+    <tr>
+      <td><span class="badge pause">PAUSE</span></td>
+      <td>Claude disagrees with Codex (with reasoning). OR Claude is uncertain. OR the fix would expand scope. OR it's a product/business decision. OR there are multiple valid approaches.</td>
+      <td>Loop stops. You see both sides and decide. Loop resumes with your decision.</td>
+    </tr>
+    <tr>
+      <td><span class="badge nit">NIT</span></td>
+      <td>Cosmetic, trivial, or stylistic. Not worth fixing before shipping.</td>
+      <td>Logged in the iteration log. Not fixed. Shown in the final report for optional follow-up.</td>
+    </tr>
+  </table>
+
+  <div class="callout">
+    Every classification requires specific reasoning referencing the actual plan or code. <em>"I don't think this is an issue"</em> is not sufficient &mdash; Claude must cite what it checked and why the finding is or isn't valid.
+  </div>
+</section>
+
+<!-- ━━━ HANDOFF ━━━ -->
+<section class="section">
+  <div class="section-label">Data Contract</div>
+  <h2>The Handoff File</h2>
+
+  <p>When <code>/planaz</code> or <code>/build</code> finishes its primary work, it writes a compact handoff file to <code>~/.claude/tmp/</code>. This file contains everything the convergence subagent needs to reconstruct a complete Codex audit prompt. It's data only &mdash; no instructions (those live in <code>/converge</code>).</p>
+
+  <table>
+    <tr><th>Section</th><th>What it contains</th><th>Why Codex needs it</th></tr>
+    <tr><td>Audit Target</td><td>Type (plan or build), objective, plan file path, project root</td><td>Tells Codex what kind of audit to run</td></tr>
+    <tr><td>Project Context</td><td>CLAUDE.md path, roadmap, tech stack, key decisions</td><td>Codex needs project conventions to check against</td></tr>
+    <tr><td>Files to Audit</td><td>Every file created or modified (absolute paths)</td><td>Codex reads these to find issues</td></tr>
+    <tr><td>Validation Context</td><td>Commands run, pass/fail counts, diff type</td><td>Codex can evaluate whether tests are sufficient</td></tr>
+    <tr><td>Change Context</td><td>(Build only) Git diff, self-audit findings, reconciliation</td><td>Codex sees what changed, not just final state</td></tr>
+    <tr><td>Resume State</td><td>(After PAUSE) Iteration number, user's decision</td><td>Subagent picks up where it left off</td></tr>
+  </table>
+
+  <p>The handoff file is ephemeral &mdash; it's deleted after the convergence loop completes (or errors). It never pollutes your project's git status.</p>
+</section>
+
+<!-- ━━━ ERRORS ━━━ -->
+<section class="section">
+  <div class="section-label">Failure Modes</div>
+  <h2>Error Handling</h2>
+
+  <p>The system is designed to degrade gracefully. Every failure mode has a defined behavior &mdash; nothing silently breaks.</p>
+
+  <table>
+    <tr><th>Failure</th><th>Where it happens</th><th>What the system does</th></tr>
+    <tr><td>Codex MCP call fails</td><td>Subagent</td><td>Automatically falls back to <code>codex exec</code> CLI. If both MCP and CLI fail, returns CODEX_FAILED + a manual prompt as last resort.</td></tr>
+    <tr><td>Handoff file is invalid</td><td>Subagent</td><td>Returns HANDOFF_INVALID. Main session rewrites the handoff and retries once.</td></tr>
+    <tr><td>Subagent won't spawn</td><td>Parent session</td><td>Suggests running <code>/converge</code> manually in a fresh Claude Code session.</td></tr>
+    <tr><td>Subagent times out</td><td>Parent session</td><td>Retries once. If it times out again, presents the error.</td></tr>
+    <tr><td>Codex tries to edit files</td><td>Subagent</td><td>Always declined. Codex is the auditor. Claude applies fixes.</td></tr>
+    <tr><td>Iteration log can't be written</td><td>Subagent</td><td>Continues with in-memory tracking. Warns that oscillation detection is degraded.</td></tr>
+  </table>
+</section>
+
+<div class="sep"></div>
+
+<!-- ━━━ INSTALL ━━━ -->
+<section class="section">
+  <div class="section-label">Getting Started</div>
+  <h2>Installation</h2>
+
+  <h3>1. Install the prerequisites</h3>
+  <p>You need both CLI tools installed globally:</p>
+  <ul>
+    <li><strong>Claude Code</strong> &mdash; <code>npm install -g @anthropic-ai/claude-code</code> (<a href="https://claude.ai/claude-code">docs</a>)</li>
+    <li><strong>Codex CLI</strong> &mdash; <code>npm install -g @openai/codex</code> (<a href="https://github.com/openai/codex">docs</a>)</li>
+  </ul>
+  <p>Make sure both work by running <code>claude --version</code> and <code>codex --version</code> in your terminal.</p>
+
+  <h3>2. Run the installer</h3>
+  <pre><code>git clone https://github.com/&lt;your-username&gt;/smeac.git
+cd smeac/convergence
+bash install.sh</code></pre>
+
+  <p>The installer does four things:</p>
+  <ol>
+    <li><strong>Copies 6 command files</strong> to <code>~/.claude/commands/</code> (backs up any existing files with the same names)</li>
+    <li><strong>Registers Codex as an MCP server</strong> in <code>~/.mcp.json</code> (merges with your existing config, doesn't overwrite)</li>
+    <li><strong>Creates <code>~/.claude/tmp/</code></strong> for ephemeral handoff files</li>
+    <li><strong>Verifies</strong> that both CLIs are installed and accessible</li>
+  </ol>
+
+  <div class="callout warn">
+    Restart Claude Code after installation. The MCP config change only takes effect on restart. After restarting, you should see <code>codex</code> in your available MCP tools.
+  </div>
+
+  <h3>3. Verify it works</h3>
+  <p>Open Claude Code and type <code>/planaz</code>. If the command loads, the installation worked. The first time the convergence loop fires, it will call Codex via MCP &mdash; if that call succeeds, everything is connected.</p>
+</section>
+
+<!-- ━━━ USAGE ━━━ -->
+<section class="section">
+  <div class="section-label">Workflow</div>
+  <h2>Usage</h2>
+
+  <h3>Planning a feature</h3>
+  <pre><code>/planaz Build user authentication with OAuth2 and JWT tokens</code></pre>
+  <p>Claude gathers context from your codebase, creates a structured plan, audits its own plan for issues, fixes them, saves the plan to disk, then spawns the convergence loop. Codex audits the plan for design flaws, sequencing errors, and missing dependencies. You watch it converge and step in only when there's a PAUSE.</p>
+
+  <h3>Building from a plan</h3>
+  <pre><code>/build PLAN-user-authentication.md</code></pre>
+  <p>Claude reads the plan and executes it task by task. After all tasks are complete, it runs a self-audit (typecheck, tests, validation), fixes any issues, then spawns the convergence loop. Codex audits the actual code &mdash; including the git diff and Claude's self-audit findings &mdash; to catch what Claude missed.</p>
+
+  <h3>Running the loop manually</h3>
+  <pre><code>/converge ~/.claude/tmp/convergence-handoff-auth.md</code></pre>
+  <p>You can run the convergence loop standalone on any handoff file. This is useful if the subagent timed out, if you want to run it in a fresh session with maximum context, or if you just want to re-audit something.</p>
+</section>
+
+<!-- ━━━ PRINCIPLES ━━━ -->
+<section class="section">
+  <div class="section-label">Philosophy</div>
+  <h2>Design Principles</h2>
+
+  <div class="principles">
+    <div class="principle">
+      <div class="num">01</div>
+      <strong>Battle-test infrastructure</strong>
+      <p>This is v1 tooling, not finished automation. The first few uses will surface edge cases. The system is kept simple enough to iterate on quickly.</p>
+    </div>
+    <div class="principle">
+      <div class="num">02</div>
+      <strong>Graceful degradation</strong>
+      <p>If Codex MCP fails, the system falls back to <code>codex exec</code> CLI automatically. If both fail, it generates a copy-paste prompt. Three layers of fallback &mdash; MCP, CLI, manual &mdash; so the loop keeps running.</p>
+    </div>
+    <div class="principle">
+      <div class="num">03</div>
+      <strong>Checkpoints, not hard limits</strong>
+      <p>Plans check in every 3 iterations, builds every 5. You decide to continue or stop. The loop runs as long as you want it to. No hard walls.</p>
+    </div>
+    <div class="principle">
+      <div class="num">04</div>
+      <strong>Codex audits, Claude fixes</strong>
+      <p>Clear separation of concerns. Codex never writes to your files. Claude never blindly accepts Codex's findings. Classification with explicit reasoning is mandatory.</p>
+    </div>
+    <div class="principle wide">
+      <div class="num">05</div>
+      <strong>Every PAUSE is a decision surface</strong>
+      <p>When the loop pauses, you're not just answering a yes/no question. You can change direction, add new requirements, override findings, or tell it to stop. The loop absorbs your decision and continues from where it left off. You're always in control.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ FOOTER ━━━ -->
+<footer class="footer">
+  SMEAC &middot; Converged through 5 iterations of its own Codex audit loop &middot; 2026
+</footer>
+
+</div>
+</body>
+</html>
