@@ -72,6 +72,61 @@ If the session after you wastes its first 20% re-discovering what you already kn
 
 ---
 
+## Installation
+
+### Prerequisites
+- Node.js >= 18
+
+### Build
+
+```bash
+cd smeac/relief
+npm install
+npm run build
+```
+
+### Register MCP Server
+
+Add to `~/.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "relief": {
+      "command": "node",
+      "args": ["/absolute/path/to/smeac/relief/dist/index.js"]
+    }
+  }
+}
+```
+
+Replace `/absolute/path/to/smeac` with your actual path.
+
+### Install Slash Commands
+
+```bash
+cp relief/commands/relief.md ~/.claude/commands/relief.md
+cp relief/commands/assume-watch.md ~/.claude/commands/assume-watch.md
+```
+
+Restart Claude Code to pick up the changes.
+
+### Usage
+
+**Session A (degrading):**
+```
+/relief
+```
+Claude gathers your session context, structures it as a SMEAC order, and posts it.
+
+**Session B (fresh terminal):**
+```
+/assume-watch
+```
+Claude pulls the handoff, reads it back to you, and says "I have the watch."
+
+---
+
 ## Status
 
-**Planning.** Architecture defined. MCP server not yet built. Next step: `/planaz` the implementation.
+**Built.** MCP server operational. 10/10 integration tests passing.

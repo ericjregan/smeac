@@ -1,0 +1,26 @@
+{
+  "name": "@smeac/relief",
+  "version": "1.0.0",
+  "description": "Session-to-session handoff broker for Claude Code (General Order #6)",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "claude-code",
+    "session-handoff",
+    "smeac"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "fastmcp": "^3.34.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -46,7 +46,7 @@ Each tool solves a specific failure mode:
 |------|------------------|--------|
 | [**Setup**](setup/) | Starting from scratch with no discipline | Example configs |
 | [**Convergence**](convergence/) | AI writes code nobody audits. Bugs ship. | Deployed |
-| [**Relief**](relief/) | Sessions degrade. Context dies. Next session starts from zero. | Planning |
+| [**Relief**](relief/) | Sessions degrade. Context dies. Next session starts from zero. | Built |
 | [**Self-Learning**](self-learning/) | Same mistakes repeat across sessions. No institutional memory. | WIP |
 
 ---
@@ -125,7 +125,7 @@ An MCP server that lets Claude Code sessions hand off context to each other — 
 | `assume_watch` | "I have the watch" | Pull the latest handoff for this working directory |
 | `check_questions` | Radio check | Read/post questions between sessions |
 
-**Status: Planning** — see [relief/README.md](relief/) for the full vision.
+**Status: Built** — see [relief/README.md](relief/) for installation and usage.
 
 ---
 
