@@ -6,9 +6,31 @@ This document explains the full system — how the commands work, how they conne
 
 ---
 
+## v1 vs v2 — Pick Your Speed
+
+Both versions produce Codex-audited, converged output. The difference is how much scrutiny happens before that final gate.
+
+| | v1 (`/planaz`, `/build`) | v2 (`/planaz2`, `/build2`) |
+|---|---|---|
+| **Planning** | Claude plans + self-audits inline | Dispatches specialized agents: explorer → architect → reviewer. Each role is a separate subagent with fresh context. |
+| **Build execution** | Conductor protocol (4 roles, 1 AI) | Conductor2 protocol (4 roles dispatched as separate subagents) + adversarial review + silent failure hunt + QA agent |
+| **Acceptance tests** | Not required | Hard gate — plan rejected without machine-verifiable acceptance tests |
+| **Convergence** | Single monolithic Codex call | Phased auditing: Codex builds a checklist → audits in batches of 5 → consolidates cross-file findings. Per-batch retry/CLI/PAUSE escalation. |
+| **Rigor control** | None — fixed behavior | Rigor prompt before any work: `high` (six sigma), `medium` (default), `low` (fast pass) |
+| **Observability** | None during convergence | Live status file: `cat ~/.claude/tmp/convergence-status-<topic>.txt` |
+| **Error handling** | MCP fail → CLI fallback → CODEX_FAILED | 90s connection timeout, overload backoff (10s→30s→CLI→PAUSE), thread staleness probes, batch accounting, auth error detection |
+| **Speed** | Faster. Minutes for small plans. | Slower. The agent dispatch, adversarial review, and phased auditing add time. |
+| **When to use** | Quick features, config changes, formatting fixes, anything where speed matters more than depth | Production deploys, auth systems, billing logic, data migrations, anything where a missed bug is expensive |
+
+**v1 is not deprecated.** It's the right tool when the cost of a bug is low and the cost of waiting is high. v2 is for when you'd rather wait an extra 20 minutes than ship a subtle race condition.
+
+Both versions share the same `/converge` loop — v2 just upgraded it with phased auditing and observability. v1 callers still work (the loop defaults to medium rigor and single-call Codex when the handoff doesn't include v2 fields).
+
+---
+
 ## How the Pieces Fit Together
 
-Six slash commands, one MCP bridge, two ephemeral file types.
+### v1 — Six slash commands, one MCP bridge, two ephemeral file types.
 
 ```
 YOU
@@ -44,7 +66,7 @@ YOU
           If CODEX_FAILED: both MCP and CLI failed — manual prompt (last resort).
 ```
 
-### Command dependency chain
+### v1 command dependency chain
 
 | Command | Uses internally | Used by |
 |---------|----------------|---------|
@@ -55,7 +77,54 @@ YOU
 | `/audit` | Nothing | `/planaz`, `/build`, or you directly |
 | `/codex` | Nothing | You (manual fallback) |
 
+### v2 — Specialized agents, layered defense, phased auditing.
+
+```
+YOU
+ |
+ |  /planaz2 "build user auth"        /build2
+ |   (rigor prompt first)              (rigor prompt first)
+ v          |                                  |
+ ┌──────────┴──────────┐              ┌────────┴──────────────────┐
+ │  Dispatched agents: │              │  Phase 1: Build           │
+ │  Explorer → Architect│             │   (Conductor2 — agents)   │
+ │   → Reviewer        │              │  Phase 2: Adversarial     │
+ │  Hard gate:         │              │   review (fresh eyes)     │
+ │   acceptance tests  │              │  Phase 2b: Silent failure │
+ │   required          │              │   hunt                    │
+ └────────┬────────────┘              │  Phase 3: QA agent        │
+          |                           │  Phase 4: Reconciliation  │
+          |  writes handoff           │  Phase 5: Fix findings    │
+          |  (includes Rigor level)   └────────┬──────────────────┘
+          v                                    v
+ ┌──────────────────────────────────────────────┐
+ │  SUBAGENT runs /converge (v2 mode)           │
+ │                                              │
+ │  Phase 1: Codex reads files, returns checklist│
+ │  Phase 2-N: Audits in batches of 5           │
+ │  Final: Cross-file consolidation             │
+ │                                              │
+ │  Status file updated at every step           │
+ │  90s connection timeout per call             │
+ │  Overload backoff: 10s → 30s → CLI → PAUSE  │
+ │  Per-batch: retry → CLI → PAUSE (no drops)   │
+ └──────────────────┬───────────────────────────┘
+                    |
+          returns CONVERGED / PAUSE / CODEX_FAILED
+```
+
+### v2 command dependency chain
+
+| Command | Uses internally | Used by |
+|---------|----------------|---------|
+| `/planaz2` | `feature-dev:code-explorer`, `feature-dev:code-architect`, `feature-dev:code-reviewer` (subagents), `/converge` (via subagent) | You |
+| `/build2` | `feature-dev:code-architect`, `feature-dev:code-reviewer`, `superpowers:code-reviewer`, `pr-review-toolkit:silent-failure-hunter` (subagents), `/converge` (via subagent) | You |
+| `/converge` | Codex MCP (`mcp__codex__codex`, `mcp__codex__codex-reply`), Codex CLI fallback | `/planaz2`, `/build2`, `/planaz`, `/build`, or you directly |
+| `/conductor2` | Nothing | `/build2` |
+
 ---
+
+## v1 Commands
 
 ## /planaz — Plan A-to-Z
 
@@ -219,6 +288,124 @@ Issues found → repeat from 3 or 4. Clean → next task.
 
 ---
 
+## v2 Commands
+
+## /planaz2 — Plan A-to-Z v2
+
+**What:** Full planning pipeline with specialized subagents and mandatory acceptance tests. More thorough than `/planaz` — every role (explorer, architect, reviewer) runs as an independent agent with fresh context.
+
+**When to use:** Production features, auth systems, billing, data migrations, anything where a missed edge case costs real money or real time.
+
+**Syntax:** `/planaz2 Build phased Codex auditing with session persistence`
+
+### What's different from v1
+
+1. **Rigor prompt** — First question before any work: `high` / `medium` / `low`. Sets the Codex inference depth for the convergence loop. You answer before walking away.
+2. **Dispatched agents** — Context gathering, plan writing, and plan auditing each run as separate subagents (`feature-dev:code-explorer`, `feature-dev:code-architect`, `feature-dev:code-reviewer`). Fresh context, no cross-contamination.
+3. **Acceptance tests hard gate** — Plan is rejected without machine-verifiable acceptance tests. Three required sections: API tests, browser tests, unit tests. Types that don't apply are marked N/A, but the sections must exist.
+4. **Testability gate** — "Works correctly" is not a success criterion. Every criterion must be verifiable by curl, a test runner, or Playwright.
+
+### Steps
+
+1. **Gather Context** — Dispatch `feature-dev:code-explorer`. Returns structured context summary.
+2. **Plan** — Dispatch `feature-dev:code-architect`. Produces Conductor2 plan with acceptance tests.
+3. **Audit** — Dispatch `feature-dev:code-reviewer`. Checks atomicity, sequencing, missing tasks, testability.
+4. **Re-Plan** — Re-dispatch architect with audit findings.
+5. **Save** — Write `PLAN-<topic>.md` with plan + audit findings + context.
+6. **Convergence** — Write handoff (includes Rigor field), spawn `/converge` subagent.
+7. **Report + Cleanup** — Present report, delete temp files.
+
+---
+
+## /build2 — Execute a Plan v2
+
+**What:** Executes a plan with layered defense — specialized agents for every role, adversarial review by a fresh reviewer, silent failure hunting, and a dedicated QA agent. Slower than `/build`, catches more.
+
+**When to use:** After `/planaz2` produces a plan. Or any plan where you want maximum scrutiny before shipping.
+
+### What's different from v1
+
+1. **Rigor prompt** — Same as `/planaz2`. First question, before any code.
+2. **Conductor2 protocol** — Build agents dispatched as subagents, not inline roles.
+3. **Adversarial review (Phase 2)** — A fresh `superpowers:code-reviewer` that receives ONLY the git diff, plan, and CLAUDE.md. It didn't build this. That's the point.
+4. **Silent failure hunt (Phase 2b)** — `pr-review-toolkit:silent-failure-hunter` checks for swallowed errors, bad fallbacks, missing error propagation.
+5. **QA agent (Phase 3)** — Runs acceptance tests from the plan against a live instance. API tests via curl, browser tests via Playwright, adversarial edge cases it generates itself.
+6. **Fix loop (Phase 5)** — All findings from Phases 2, 2b, 3 fixed via reduced Conductor2 loop. QA re-runs after fixes.
+
+### Phases
+
+1. **Build** — Conductor2 protocol, micro-task by micro-task, mid-build reconciliation.
+2. **Adversarial Review** — Independent reviewer, fresh context, git diff only.
+2b. **Silent Failure Hunt** — Error handling audit.
+3. **QA** — API tests, browser tests, adversarial edge cases, unit tests.
+4. **Reconciliation** — Every task: DONE / MISSED / DEVIATED / FLAGGED.
+5. **Fix Findings** — Reduced Conductor2 loop for all review/QA findings.
+6. **Convergence** — Handoff with Rigor field, phased Codex audit.
+7. **Final Report** — What changed, QA results, adversarial findings, convergence results, residual risk.
+
+### The layered defense model
+
+```
+Per micro-task:
+  Audit Agent ─── code-level: types, logic, patterns
+
+End of build:
+  Adversarial ─── integration-level: design flaws, missed connections
+  Silent Hunt ─── error handling: swallowed errors, bad fallbacks
+  QA Agent ───── feature-level: broken flows, edge cases, real requests
+  Codex ──────── architectural-level: things everyone is too close to see
+```
+
+---
+
+## /conductor2 — Micro-Tasking v2
+
+**What:** Same four-role framework as `/conductor`, but each role dispatches to a specialized subagent instead of running inline.
+
+**Why subagents matter:** In v1, all four roles share one context window. By task 15 of a big build, the Audit Agent is working with the dregs of context. In v2, each role gets fresh context every cycle.
+
+### Dispatch table
+
+| Role | Agent Type | What It Does |
+|------|-----------|------------|
+| UX Agent | `feature-dev:code-explorer` | Provides specs and constraints for this task |
+| Code Agent | `feature-dev:code-architect` | Implements this task only |
+| Audit Agent | `feature-dev:code-reviewer` | Reviews, produces findings |
+| Anti-Drift | Conductor (inline) | Enforces scope — this one stays in the main context |
+
+### The iron law
+
+The conductor dispatches agents. The conductor does NOT implement, review, or provide specs itself. If a subagent returns thin results, re-dispatch with a better prompt. If it fails twice, flag to the user. Never absorb the work into the conductor's context.
+
+---
+
+## /converge — The Convergence Loop (v2 upgrades)
+
+The `/converge` command is shared between v1 and v2. When called by v2 commands (which include a `Rigor` field in the handoff), it enables phased auditing. When called by v1 commands (no Rigor field), it defaults to medium rigor and the v1 single-call behavior still works as a fallback.
+
+### What v2 adds to the loop
+
+**Rigor control** — Read from handoff. Maps to Codex's `model_reasoning_effort` config: `low`, `medium`, `high`. Default: medium (backward-compatible with v1 callers). Shown in the convergence report.
+
+**Phased auditing (Step B):**
+- **Phase 1:** `mcp__codex__codex` starts a new session. Codex reads all files, returns a numbered audit checklist. `threadId` captured for session persistence.
+- **Phases 2-N:** `mcp__codex__codex-reply` continues the session. Audits in batches of 5 items. Each batch verified for completeness (batch accounting).
+- **Final Phase:** Consolidation — cross-file findings that individual batches missed.
+
+**Connection timeout (90s)** — If an MCP call returns zero data in 90 seconds, it's considered hung. This is NOT a response timeout — once data flows, the call runs as long as needed. Timeout and overload have separate handling paths.
+
+**Overload backoff** — Explicit 429/503 errors trigger: wait 10s → retry → wait 30s → retry → CLI → PAUSE. Applies at all phases.
+
+**Per-batch failure escalation** — No findings are ever dropped. Retry on same thread → CLI for that batch → PAUSE to user. Only two options on PAUSE: retry or manual audit. No "continue without."
+
+**Thread staleness probe** — After any batch falls back to CLI, probe the MCP session before the next batch. If stale, abandon MCP and CLI the rest.
+
+**Status file** — `~/.claude/tmp/convergence-status-<topic>.txt`. JSON single line, overwritten at every step transition. `cat` it from any terminal to see where the loop is. Deleted on every return (CONVERGED, PAUSE, CODEX_FAILED).
+
+**Auth error detection** — If both MCP and CLI fail with the same authentication/permission error, bypass retry and go straight to CODEX_FAILED. Repeated auth failures are configuration problems, not transient issues.
+
+---
+
 ## File Formats
 
 ### Handoff file
@@ -241,6 +428,7 @@ Data only — no instructions. `/converge` reads this to reconstruct the Codex a
 - Key decisions:
   - [decision 1]
   - [decision 2]
+- Rigor: [high | medium | low — v2 only, absent in v1 handoffs]
 
 ## Files to Audit
 - [absolute path]
@@ -421,13 +609,28 @@ Verify the files exist: `ls ~/.claude/commands/`. If they're missing, re-run `ba
 
 ## File Inventory
 
+### v1
+
 | File | Location | Purpose |
 |------|----------|---------|
 | `planaz.md` | `~/.claude/commands/` | /planaz command |
 | `build.md` | `~/.claude/commands/` | /build command |
-| `converge.md` | `~/.claude/commands/` | /converge command |
 | `conductor.md` | `~/.claude/commands/` | /conductor framework |
 | `audit.md` | `~/.claude/commands/` | /audit command |
 | `codex.md` | `~/.claude/commands/` | /codex prompt generator |
-| `~/.mcp.json` | Home directory | MCP server config (codex entry) |
-| `~/.claude/tmp/` | Claude config | Ephemeral handoff + log files |
+
+### v2
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `planaz2.md` | `~/.claude/commands/` | /planaz2 command — agent-dispatched planning |
+| `build2.md` | `~/.claude/commands/` | /build2 command — layered defense build |
+| `conductor2.md` | `~/.claude/commands/` | /conductor2 framework — subagent dispatch |
+
+### Shared
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `converge.md` | `~/.claude/commands/` | /converge — shared by v1 and v2, phased auditing when v2 Rigor field present |
+| `~/.mcp.json` | Home directory | MCP server config (codex + codex-reply) |
+| `~/.claude/tmp/` | Claude config | Ephemeral handoff, log, status, and prompt files |

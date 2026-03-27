@@ -45,7 +45,7 @@ Each tool solves a specific failure mode:
 | Tool | Problem It Solves | Status |
 |------|------------------|--------|
 | [**Setup**](setup/) | Starting from scratch with no discipline | Example configs |
-| [**Convergence**](convergence/) | AI writes code nobody audits. Bugs ship. | Deployed |
+| [**Convergence**](convergence/) | AI writes code nobody audits. Bugs ship. v1 (fast) + v2 (thorough). | Deployed |
 | [**Relief**](relief/) | Sessions degrade. Context dies. Next session starts from zero. | Built |
 | [**Self-Learning**](self-learning/) | Same mistakes repeat across sessions. No institutional memory. | WIP |
 
