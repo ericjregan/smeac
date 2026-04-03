@@ -157,6 +157,7 @@ Correction happens  →  /reflect captures it  →  Pattern-Key assigned
 | `session-start.sh` | Hook | MCP health check + surface recurring patterns |
 | `stop-reflect.sh` | Hook | Remind to capture learnings at session end |
 | `no-guessing.sh` | Hook | Force investigation before answering diagnostic questions |
+| `bug-report-enforcer.sh` | Hook | Force code investigation when user reports something is broken |
 | `subagent-stop.sh` | Hook | Quality gate — reject empty/thin agent results |
 | `meta-rules.md` | Rule | How to write rules — keeps promoted rules concise |
 
@@ -203,3 +204,57 @@ Correction happens  →  /reflect captures it  →  Pattern-Key assigned
 2. **You approve everything.** No auto-commits, no auto-promotions, no auto-anything that changes the system. The human makes decisions.
 3. **Fail silently, not loudly.** Missing files = exit 0. Hooks stay fast (the MCP health check has a 5-second timeout per server as the upper bound). The tools help when they can and stay out of the way when they can't.
 4. **One-edit reversible.** Every component can be disabled independently. Remove a hook, delete a rule, kill the MCP server — each is a single action.
+
+---
+
+## The Enforcer — Because Claude Doesn't Follow Its Own Rules
+
+Let's be honest. Claude can build a 2,500-line feature with three review layers, Codex convergence, and 82 passing tests — then turn around and tell you to clear your browser cache three times while the code is broken. The rule file saying "never blame the browser" was sitting right there. Unread. Ignored. For the fourth time.
+
+Rules-as-text-files are necessary but not sufficient. Claude will write a beautiful rule, commit it with a heartfelt commit message, and violate it identically four days later. It's like giving a golden retriever a written list of reasons not to eat the sandwich.
+
+**`bug-report-enforcer.sh`** is the structural fix. It's a `UserPromptSubmit` hook that detects when you report something is broken ("not working", "nothing happens", "don't see it") and **injects the relevant rules directly into the conversation context** before Claude can respond. Claude can't skip what's already in the prompt.
+
+```
+You: "the chat is broken"
+
+Hook fires. Claude receives:
+> BUG REPORT DETECTED. MANDATORY INVESTIGATION BEFORE RESPONDING:
+> 1. Trace the code path from user action to expected behavior
+> 2. Read the relevant source files  
+> 3. Reproduce in Playwright (do NOT ask the user to test)
+> 4. Identify the actual code bug with evidence
+> 5. NEVER suggest cache/refresh/browser/hard-reload/incognito
+>
+> [Full text of never-blame-browser.md injected here]
+```
+
+It's the difference between "please remember to check your homework" and "your homework is stapled to your forehead."
+
+### Installation
+
+```bash
+cp self-learning/hooks/bug-report-enforcer.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/bug-report-enforcer.sh
+```
+
+Add to `settings.json` under `hooks.UserPromptSubmit` (can coexist with `no-guessing.sh`):
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/no-guessing.sh" },
+          { "type": "command", "command": "bash ~/.claude/hooks/bug-report-enforcer.sh" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Why This Exists
+
+Because after the third time being told "it's not a browser issue," the human should not have to say it a fourth time. The machine should already know. And if it can't remember, the system should remember for it.
