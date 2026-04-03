@@ -33,7 +33,7 @@ mkdir -p "$TMP_DIR"
 echo "Directories: $COMMANDS_DIR, $TMP_DIR"
 
 # Copy command files
-COMMANDS=(planaz build converge conductor audit codex)
+COMMANDS=(planaz build converge conductor audit codex planaz2 build2 conductor2)
 for cmd in "${COMMANDS[@]}"; do
     if [ -f "$COMMANDS_DIR/$cmd.md" ]; then
         echo "  Backing up existing $cmd.md -> $cmd.md.bak"
@@ -100,9 +100,18 @@ echo ""
 echo "Restart Claude Code to pick up the changes."
 echo ""
 echo "Commands installed:"
+echo ""
+echo "  v1 (fast):"
 echo "  /planaz    Plan A-to-Z with Codex convergence loop"
 echo "  /build     Build from plan with Codex convergence loop"
-echo "  /converge  Standalone convergence loop (called by planaz/build)"
 echo "  /conductor Conductor framework (micro-tasking protocol)"
 echo "  /audit     Reliability push audit"
 echo "  /codex     Manual Codex prompt generator"
+echo ""
+echo "  v2 (thorough):"
+echo "  /planaz2    Agent-dispatched planning with acceptance tests"
+echo "  /build2     Layered defense build (adversarial review + QA + silent failure hunt)"
+echo "  /conductor2 Subagent-dispatched micro-tasking"
+echo ""
+echo "  Shared:"
+echo "  /converge  Convergence loop (phased auditing when called by v2)"
