@@ -76,7 +76,7 @@ Example configuration files for Claude Code. These are templates — adapt them 
 
 | # | Rule | Why It Exists |
 |---|------|--------------|
-| 1 | Commit discipline | AI was auto-committing, pushing to main, creating chaos |
+| 1 | Deploy discipline | Commits are fine (reversible). Deploys require explicit approval (irreversible). |
 | 2 | Explain before acting | AI would write 500 lines before explaining the approach |
 | 3 | Fix it right | AI loves quick patches. The right fix prevents rework |
 | 4 | Keep it simple | AI defaults to jargon |
@@ -335,7 +335,7 @@ flowchart TD
 ## Philosophy
 
 1. **Mechanical over advisory.** Hooks and gates are enforced. Rules in CLAUDE.md are suggestions. When the problem is mechanical, build infrastructure.
-2. **You approve everything.** No auto-commits, no auto-promotions, no auto-anything that changes the system. The human makes decisions.
+2. **You approve deployments.** Commits and pushes are fine — they're reversible. Deploys to production require explicit human approval. No auto-deploys, no auto-promotions to live environments.
 3. **Infrastructure fails open.** Missing files = exit 0. Hooks stay fast. The tools help when they can and stay out of the way when they can't. (This applies to hooks and infrastructure — application code gets the opposite treatment via the Silent Failure Hunt.)
 4. **One-edit reversible.** Every component can be disabled independently. Remove a hook, delete a rule, kill the MCP server — each is a single action.
 
