@@ -58,8 +58,9 @@ export async function executeCheckQuestions(args: z.infer<typeof checkQuestionsP
     }
 
     case "answer": {
+      const targetSession = args.session_id ?? sessionId;
       try {
-        answerQuestion(args.cwd, args.question_id!, args.answer!);
+        answerQuestion(args.cwd, args.question_id!, args.answer!, targetSession);
         return `Answer posted for question ${args.question_id}.`;
       } catch (err) {
         return err instanceof Error ? err.message : String(err);
