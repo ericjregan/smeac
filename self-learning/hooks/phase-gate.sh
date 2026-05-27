@@ -54,6 +54,17 @@ impl_patterns = [
     r"^\s*Implement(ing|ation)?\b",
     r"^\s*Build(ing)?\s+Task\s+\d+\b",
 ]
+# Deploy-pattern detection. Match dispatches that ship code to a real environment.
+# These require the build-side gates (build_audit, build_convergence, deploy_approval)
+# IN ADDITION TO the plan-side gates (audit, convergence, user_approval).
+deploy_patterns = [
+    r"^\s*(Phase\s+\d+\s+Task\s+\d+:\s*)?Deploy(ing|ment)?\b",
+    r"^\s*Push\s+to\s+(staging|main|production|prod)\b",
+    r"^\s*Merge\s+to\s+(staging|main|production|prod)\b",
+    r"^\s*Release\b",
+    r"^\s*Ship(ping|ped)?\b",
+    r"^\s*Cutover\b",
+]
 # Review/exploration patterns — explicitly NOT gated.
 review_patterns = [
     r"^\s*(Spec|Code)\s+(compliance\s+)?(review|reviewer)",
@@ -71,7 +82,8 @@ def matches_any(s, patterns):
     return any(re.search(p, s, re.IGNORECASE) for p in patterns)
 
 is_review = matches_any(desc, review_patterns)
-is_impl = matches_any(desc, impl_patterns) and not is_review
+is_deploy = matches_any(desc, deploy_patterns) and not is_review
+is_impl = matches_any(desc, impl_patterns) and not is_review and not is_deploy
 
 # Reviewer/explorer agent types are not implementation regardless of description.
 review_subagent_types = {
@@ -90,8 +102,9 @@ review_subagent_types = {
 }
 if subagent_type in review_subagent_types:
     is_impl = False
+    is_deploy = False
 
-if not is_impl:
+if not is_impl and not is_deploy:
     print("SKIP_NOT_IMPLEMENTATION")
     sys.exit(0)
 
@@ -143,6 +156,8 @@ except Exception as e:
     sys.exit(0)
 
 reasons = []
+
+# Plan-side gates — required for both implementation AND deploy dispatches.
 audit = gate.get("audit") or {}
 if audit.get("passed") is not True:
     reasons.append("audit.passed != true")
@@ -160,6 +175,26 @@ if isinstance(blockers_conv, int) and blockers_conv > 0:
 approval = gate.get("user_approval") or {}
 if approval.get("approved") is not True:
     reasons.append("user_approval.approved != true")
+
+# Build-side gates — required ONLY for deploy dispatches.
+if is_deploy:
+    build_audit = gate.get("build_audit") or {}
+    if build_audit.get("passed") is not True:
+        reasons.append("build_audit.passed != true (run build audit on the actual diff before deploy)")
+    blockers_ba = build_audit.get("blockers_open", 0) or 0
+    if isinstance(blockers_ba, int) and blockers_ba > 0:
+        reasons.append(f"{blockers_ba} build_audit blocker(s) still open")
+
+    build_convergence = gate.get("build_convergence") or {}
+    if build_convergence.get("passed") is not True:
+        reasons.append("build_convergence.passed != true (run Codex on the actual diff before deploy)")
+    blockers_bc = build_convergence.get("blockers_open", 0) or 0
+    if isinstance(blockers_bc, int) and blockers_bc > 0:
+        reasons.append(f"{blockers_bc} build_convergence blocker(s) still open")
+
+    deploy_approval = gate.get("deploy_approval") or {}
+    if deploy_approval.get("approved") is not True:
+        reasons.append("deploy_approval.approved != true (deploy needs its own user approval, separate from execute approval)")
 
 if reasons:
     print("BLOCK_GATES_OPEN|" + ";;".join(reasons))
