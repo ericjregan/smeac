@@ -392,3 +392,121 @@ Add to `settings.json` under `hooks.UserPromptSubmit` (can coexist with `no-gues
 ### Why This Exists
 
 Because after the third time being told "it's not a browser issue," the human should not have to say it a fourth time. The machine should already know. And if it can't remember, the system should remember for it.
+
+---
+
+## The Second Enforcer — `phase-gate.sh`
+
+`bug-report-enforcer.sh` solves "Claude blames the browser." `phase-gate.sh` solves a different failure: **Claude self-reviews plans and ships them without audit or Codex convergence.**
+
+The Calderon pipeline incident (2026-05-24) produced 22 BLOCKER findings in iteration 4 of a convergence loop that should have been caught at iteration 1 — because the underlying plan was never audited by fresh eyes before execution. The `writing-plans` skill ends with "execute via subagent-driven-development," and Claude (faithful to the skill) goes straight to execution. The global rule "audit + converge before build" is sitting in a different rule file, unread, exactly like the never-blame-browser rule was.
+
+**`phase-gate.sh`** is the structural fix. It's a `PreToolUse` hook on the `Agent` tool that **denies any subagent dispatch whose description matches plan-driven implementation patterns** (`Task N:`, `Phase N Task M:`, `Step N:`, `Implement...`) UNLESS the working directory contains `.phase-gate.yaml` with all three gates marked passed:
+
+1. **Audit gate** — a fresh-eyes review agent (e.g., `feature-dev:code-reviewer`) audited the plan and all BLOCKER findings are resolved
+2. **Convergence gate** — Codex (via MCP or `/convergec`) audited the plan and all BLOCKER findings are resolved
+3. **Approval gate** — the user explicitly approved execution (quotable evidence required)
+
+If the gate is missing or any check is unmet, the dispatch is denied with exit code 2 and a stderr message explaining what's needed.
+
+```
+You: "go ahead with the build"
+
+Claude: [tries to dispatch] Agent(description: "Phase 1 Task 2: Add columns", ...)
+
+Hook fires. Tool call denied:
+> PHASE-GATE BLOCK — no .phase-gate.yaml found
+>
+> Plan-driven implementation requires .phase-gate.yaml in the working directory
+> recording that:
+>   1. The plan was audited by a fresh-eyes review agent (audit.passed: true)
+>   2. The plan was converged with Codex or equivalent (convergence.passed: true)
+>   3. The user explicitly approved execution (user_approval.approved: true)
+>
+> [Example schema + escape hatch instructions]
+```
+
+Claude literally cannot dispatch implementation work without satisfying the gates. The failure mode becomes "tool call denied" instead of "shipped a defect Codex would have caught at iteration 1."
+
+### The State File
+
+`.phase-gate.yaml` in the project root, schema:
+
+```yaml
+plan: docs/superpowers/plans/2026-05-26-feature-name-phase-1.md
+spec: docs/superpowers/specs/2026-05-26-feature-name-design.md
+state: drafted | audited | converged | approved | executing | shipped
+audit:
+  passed: true
+  agent: feature-dev:code-reviewer
+  timestamp: 2026-05-26T18:30:00Z
+  findings_file: docs/superpowers/reviews/2026-05-26-phase-1-audit.md
+  blockers_open: 0
+  warnings_open: 0
+convergence:
+  passed: true
+  tool: codex-mcp
+  timestamp: 2026-05-26T18:45:00Z
+  findings_file: docs/superpowers/reviews/2026-05-26-phase-1-codex.md
+  blockers_open: 0
+user_approval:
+  approved: true
+  timestamp: 2026-05-26T19:00:00Z
+  evidence: "Eric: 'yes, go' (session at 18:55)"
+```
+
+### What's Gated, What Isn't
+
+**Gated (denied unless gates pass):**
+- Agent dispatches whose description matches `^(Phase \d+ )?Task \d+\b`, `^Step \d+\b`, `^Implement\b`, `^Build Task \d+\b`
+
+**Not gated (always allowed):**
+- Non-Agent tool calls (Bash, Read, Edit, etc.)
+- Reviewer/explorer subagent types (`feature-dev:code-reviewer`, `pr-review-toolkit:*`, `Explore`, `Plan`, etc.)
+- Descriptions matching `Audit`, `Review`, `Verify`, `Explore`, `Research`, `Analyze`, `Plan`, `Brainstorm`
+- Ad-hoc dispatches whose description doesn't match the implementation pattern
+
+The escape hatch is intentional: ad-hoc fixes don't need a plan, and shouldn't be punished for not having one. But anything named like a plan task IS a plan task — and the gate fires.
+
+### The Supporting Rules
+
+Three text rules ship alongside the hook (overlap by design — text + mechanical enforcement):
+
+- **`phase-gate-discipline.md`** — the pipeline, the state file schema, the rule
+- **`plan-audit-convergence-required.md`** — what to do after writing a plan
+- **`self-review-is-not-review.md`** — why "I read it again" doesn't count
+- **`restate-prerequisites-at-transitions.md`** — what to write before every workflow transition
+
+### Installation
+
+```bash
+cp self-learning/hooks/phase-gate.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/phase-gate.sh
+cp self-learning/rules/phase-gate-discipline.md ~/.claude/rules/
+cp self-learning/rules/plan-audit-convergence-required.md ~/.claude/rules/
+cp self-learning/rules/self-review-is-not-review.md ~/.claude/rules/
+cp self-learning/rules/restate-prerequisites-at-transitions.md ~/.claude/rules/
+```
+
+Add to `settings.json` under `hooks`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "bash ~/.claude/hooks/phase-gate.sh" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Why This Exists
+
+Because the rule "audit + converge before build" is part of the workflow. And workflows that depend on a 4,000-line system prompt being remembered consistently are workflows that fail at the worst moment. The hook makes the workflow mechanical: the bad path is no longer "Claude forgets" — it's "Claude tries and the tool call is denied."
+
+Same principle as `bug-report-enforcer.sh`. Different failure mode. Same fix.

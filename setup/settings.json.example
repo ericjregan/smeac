@@ -55,6 +55,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/phase-gate.sh"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
