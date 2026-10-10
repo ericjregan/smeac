@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { loadPacket, loadQuestions } from "../storage.js";
+import { loadPacket, loadQuestions, setWorkstreamOwner } from "../storage.js";
 
 export const assumeWatchParams = z.object({
   cwd: z.string().describe("The working directory of the project"),
+  session_id: z.string().optional().describe("Optional registered broker session ID that is assuming the watch"),
 });
 
 export async function executeAssumeWatch(args: z.infer<typeof assumeWatchParams>): Promise<string> {
@@ -17,6 +18,13 @@ export async function executeAssumeWatch(args: z.infer<typeof assumeWatchParams>
 
     case "ok": {
       const { packet } = result;
+      if (args.session_id && packet.metadata.workstream_key) {
+        try {
+          setWorkstreamOwner(args.session_id);
+        } catch {
+          // keep assume_watch usable even when broker state is not initialized
+        }
+      }
       const questions = loadQuestions(args.cwd, packet.metadata.session_id);
       const unanswered = questions.filter((q) => q.answer === null);
 
