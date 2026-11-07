@@ -3,6 +3,13 @@ import { cleanOrphanedTmpFiles } from "./storage.js";
 import { postReliefParams, executePostRelief } from "./tools/post-relief.js";
 import { assumeWatchParams, executeAssumeWatch } from "./tools/assume-watch.js";
 import { checkQuestionsParams, executeCheckQuestions } from "./tools/check-questions.js";
+import { registerSessionParams, executeRegisterSession } from "./tools/register-session.js";
+import { heartbeatSessionParams, executeHeartbeatSession } from "./tools/heartbeat-session.js";
+import { setReliefModeParams, executeSetReliefMode } from "./tools/set-relief-mode.js";
+import { phaseControlParams, executePhaseControl } from "./tools/phase-control.js";
+import { workstreamControlParams, executeWorkstreamControl } from "./tools/workstream-control.js";
+import { spawnSuccessorParams, executeSpawnSuccessor } from "./tools/spawn-successor.js";
+import { relayMessageParams, executeRelayMessage } from "./tools/relay-message.js";
 
 // Clean up any orphaned .tmp files from previous runs
 cleanOrphanedTmpFiles();
@@ -10,6 +17,69 @@ cleanOrphanedTmpFiles();
 const server = new FastMCP({
   name: "relief",
   version: "1.0.0",
+});
+
+server.addTool({
+  name: "register_session",
+  description: "Register a terminal session with the relief broker and attach it to a repo/branch workstream.",
+  parameters: registerSessionParams,
+  execute: async (args) => {
+    return await executeRegisterSession(args);
+  },
+});
+
+server.addTool({
+  name: "heartbeat_session",
+  description: "Update heartbeat for a registered broker session.",
+  parameters: heartbeatSessionParams,
+  execute: async (args) => {
+    return await executeHeartbeatSession(args);
+  },
+});
+
+server.addTool({
+  name: "set_relief_mode",
+  description: "Set workstream relief mode: manual, suggest, auto, or full-auto.",
+  parameters: setReliefModeParams,
+  execute: async (args) => {
+    return await executeSetReliefMode(args);
+  },
+});
+
+server.addTool({
+  name: "phase_control",
+  description: "Start, checkpoint, complete, or propose protected-phase checkpoints for a broker session.",
+  parameters: phaseControlParams,
+  execute: async (args) => {
+    return await executePhaseControl(args);
+  },
+});
+
+server.addTool({
+  name: "workstream_control",
+  description: "Inspect or rename workstreams and read/write the shared WORKSTATE.",
+  parameters: workstreamControlParams,
+  execute: async (args) => {
+    return await executeWorkstreamControl(args);
+  },
+});
+
+server.addTool({
+  name: "spawn_successor",
+  description: "Evaluate or launch a successor session for relief handoff, using tmux when available.",
+  parameters: spawnSuccessorParams,
+  execute: async (args) => {
+    return await executeSpawnSuccessor(args);
+  },
+});
+
+server.addTool({
+  name: "relay_message",
+  description: "Send or read broker-level messages within a workstream.",
+  parameters: relayMessageParams,
+  execute: async (args) => {
+    return await executeRelayMessage(args);
+  },
 });
 
 server.addTool({
