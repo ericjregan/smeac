@@ -1,5 +1,7 @@
 # Convergence — System Reference
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 Two AI systems checking each other's work. Claude Code builds, Codex CLI reviews. Disagreements surface to you. Everything else runs automatically.
 
 This document explains the full system — how the commands work, how they connect, what the file formats are, and how to troubleshoot. Read it top to bottom if you're new. Reference specific sections later.

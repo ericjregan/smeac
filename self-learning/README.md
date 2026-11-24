@@ -1,5 +1,7 @@
 # Self-Learning System
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 A reflection and recurrence-tracking system for Claude Code. Turns session corrections into permanent, automatically-loaded rules.
 
 **Status: Work in progress.** Phase 1 is deployed and running. Phase 2 (autoresearch) not yet built.

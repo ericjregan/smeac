@@ -1,5 +1,7 @@
 # Plan: Self-Improving Agent System (v4 — Build-Ready)
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 ## Context
 
 the user wants his Claude Code agents to be measurably better tomorrow than they are today. Research across 4 parallel agents identified the universal pattern: **Observe → Record → Count → Promote → Apply**. the user's existing setup (global CLAUDE.md at 198 lines, 27 memory files, 5 feedback files, no hooks, no rules directory) already handles Observe, Record, and Apply. The gaps are **Count** (recurrence detection) and **Promote** (graduating patterns from soft memories to hard rules).

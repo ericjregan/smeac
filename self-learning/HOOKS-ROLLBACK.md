@@ -1,5 +1,7 @@
 # Self-Improvement System — Rollback Reference
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 ## Quick Fixes
 
 **Silence the Stop hook reminder only:**

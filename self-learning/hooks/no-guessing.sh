@@ -1,4 +1,5 @@
 #!/bin/bash
+# TRUST BUT VERIFY: notes here describe the code as it was when written. Read the code (and production) before relying on one.
 # Hook: UserPromptSubmit — detect diagnostic questions and inject investigation reminder
 # Prevents Claude from guessing when the answer is findable
 

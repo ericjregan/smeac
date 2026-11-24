@@ -1,5 +1,7 @@
 # Plan: Relief MCP Server
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 ## Context
 
 SMEAC repo at `~/smeac/`. Relief is a session-to-session handoff broker for Claude Code — an MCP server that lets one degrading session pass its full context to a fresh session. Architecture defined in `relief/README.md`. Named after General Order #6.

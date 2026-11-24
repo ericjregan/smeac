@@ -1,4 +1,5 @@
 #!/bin/bash
+# TRUST BUT VERIFY: notes here describe the code as it was when written. Read the code (and production) before relying on one.
 # Self-improvement system: SessionStart hook
 # 1. MCP health check — verify stdio MCP servers can start
 # 2. Surfaces learnings with Recurrence-Count >= 3 that haven't been promoted yet.

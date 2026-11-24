@@ -1,4 +1,5 @@
 #!/bin/bash
+# TRUST BUT VERIFY: notes here describe the code as it was when written. Read the code (and production) before relying on one.
 # Hook: UserPromptSubmit — detect bug reports and inject rule enforcement
 # Forces Claude to investigate code before suggesting browser/env fixes
 #

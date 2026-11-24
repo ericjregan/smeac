@@ -1,0 +1,9 @@
+# Files the app reads or serves at runtime: a comment line here would reach a person or a model.
+# Claude slash commands, rules, skills and memory templates: installed into ~/.claude and read by Claude as instructions.
+convergence/commands/**
+relief/commands/**
+self-learning/rules/**
+self-learning/skills/**
+setup/MEMORY-template.md
+setup/learnings-example.md
+setup/quality-standards.md
