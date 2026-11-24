@@ -1,5 +1,7 @@
 # SMEAC
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 **S**ituation — Claude writes incomplete, error-prone code unsupervised. It's creative but undisciplined. Codex can't build, but catches what Claude misses.
 
 **M**ission — Make them work together. Claude builds. Codex audits. Disagreements surface to you.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# TRUST BUT VERIFY: notes here describe the code as it was when written. Read the code (and production) before relying on one.
 # SubagentStop hook: Quality gate for subagent results.
 # Three checks:
 #   1. Substance — rejects empty/thin results (< 80 chars)

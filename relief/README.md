@@ -1,5 +1,7 @@
 # Relief
 
+> **TRUST BUT VERIFY:** this note describes code as it was when written. Read the code it names (and production) before relying on it.
+
 > **General Order #6:** *"To receive, obey, and pass on to the sentry who relieves me, all orders from the Commanding Officer, Command Duty Officer, Officer of the Deck, and Officers and Petty Officers of the Watch only."*
 
 An MCP server for Claude Code session-to-session handoff. When one session is degrading — losing coherence, forgetting decisions, getting slow — it posts relief. A fresh session assumes the watch with full context: what was being done, why, what's decided, what's next, and what's unresolved.

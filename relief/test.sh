@@ -1,4 +1,5 @@
 #!/bin/bash
+# TRUST BUT VERIFY: notes here describe the code as it was when written. Read the code (and production) before relying on one.
 # Relief MCP Server — Integration Tests
 # Sends JSON-RPC messages to the server via stdin and checks responses.
 set -euo pipefail
