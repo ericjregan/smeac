@@ -56,9 +56,34 @@ Every handoff follows the five-paragraph order:
 
 | Tool | Marine Equivalent | What It Does |
 |------|------------------|-------------|
+| `register_session` | Muster | Register a terminal session and attach it to a repo/branch workstream |
+| `heartbeat_session` | Sound off | Refresh liveness for a registered session |
+| `set_relief_mode` | Condition setting | Switch between `manual`, `suggest`, `auto`, and `full-auto` |
+| `phase_control` | Checkpoint discipline | Start protected phases, emit checkpoints, complete phases, or propose new checkpoint types |
+| `workstream_control` | Plot board | Inspect/named workstreams and read/write `WORKSTATE.md` |
+| `spawn_successor` | Relief launch | Evaluate or launch a successor terminal via `tmux` when allowed |
+| `relay_message` | Internal comms | Send/read broker-level workstream messages |
 | `post_relief` | "I stand relieved" | Push current session context to the broker |
 | `assume_watch` | "I have the watch" | Pull the latest handoff for this working directory |
 | `check_questions` | Radio check | Read/post questions between sessions |
+
+---
+
+## Broker v2
+
+Relief now has a second layer above the handoff packet:
+
+- session registration and heartbeats
+- workstream identity based on `repo + branch + optional workstream_name`
+- ambiguity detection for multiple unnamed sessions on the same repo/branch
+- protected-phase gating for `design`, `plan`, and `build`
+- approved checkpoint registry for auto-handoff eligibility
+- shared `WORKSTATE.md` and append-only transcript storage per workstream
+- broker-level messaging between sessions in the same workstream
+
+`auto` and `full-auto` are intentionally blocked when the broker sees same-branch ambiguity or a protected phase without an approved checkpoint.
+
+The first orchestration target is `tmux`. If `tmux` is unavailable, the broker returns a clean failure instead of pretending it launched a successor.
 
 ---
 
@@ -129,4 +154,4 @@ Claude pulls the handoff, reads it back to you, and says "I have the watch."
 
 ## Status
 
-**Built.** MCP server operational. 10/10 integration tests passing.
+**Built.** MCP server operational. `32/32` integration tests passing.
